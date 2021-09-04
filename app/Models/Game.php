@@ -7,6 +7,16 @@ use Illuminate\Support\Facades\DB;
 
 class Game extends Model
 {
+    const ROCK = 'rock';
+    const PAPER = 'paper';
+    const SCISSORS = 'scissors';
+
+    private const BEATS = [
+        self::ROCK => self::SCISSORS,
+        self::SCISSORS => self::PAPER,
+        self::PAPER => self::ROCK,
+    ];
+
     public function addPlayer($nickname): array
     {
         $players = $this->players()->get();
@@ -48,11 +58,8 @@ class Game extends Model
                         $player->gesture = $gesture;
                         DB::beginTransaction();
                         if($player->save()) {
-                            if($this->checkChoosedAll()) {
-                                $this->isOver = true;
-                                $this->callculateWinner();
-                                $this->save();
-                            }
+                            $this->callculateWinner();
+
                             DB::commit();
                             return ['success' => true, 'message' => 'Successfully add choose'];
                         }else{
@@ -72,26 +79,57 @@ class Game extends Model
     public function getInfo()
     {
         $players = $this->players;
-
+        $data = [
+            'players' => $players,
+            'isOver' => $this->is_over,
+            'result' => $this->result,
+        ];
+        return $data;
     }
 
     public function checkChoosedAll(): bool
     {
-        foreach ($this->players()->get() as $player){
-            if($player->gesture == null) {
-                return false;
+        $player = $this->players()->get();
+        if ($player->count() === 3){
+            foreach ($this->players()->get() as $player){
+                if($player->gesture == null) {
+                    return false;
+                }
             }
+            $this->is_over = true;
+            $this->save();
+            return true;
         }
-        return true;
+        return false;
     }
-    public function callculateWinner()
+    public function callculateWinner():void
     {
-        $players = $this->players;
-        if(count($players) == 3){
-            $playerOne = $players[0];
-            $playerTwo = $players[1];
-            $playerThree = $players[2];
+        if($this->checkChoosedAll()){
+            $players = $this->players;
+            $choosed = [
+                self::ROCK => 0,
+                self::PAPER => 0,
+                self::SCISSORS => 0,
+            ];
+            foreach ($players as $player) {
+                $choosed[$player->gesture] = $choosed[$player->gesture]++;
+            }
 
+            if(($choosed[self::ROCK] === 1 && $choosed[self::PAPER] === 1 && $choosed[self::SCISSORS] === 1) || array_search(3, $choosed) !== false) {
+                $this->result = 'draw';
+            }else{
+                $first = array_search(2, $choosed);
+                $second = array_search(1, $choosed);
+                $win = self::BEATS[$first] === $second ? $first : $second;
+                $winner = [];
+                foreach ($players as $player) {
+                    if($player->gesture === $win) {
+                        $winner[] = $player->nickname;
+                    }
+                }
+                $this->result = 'winner'. (count($winner) > 1 ? 's' : '').': ' . implode($winner);
+            }
+            $this->save();
         }
     }
 }

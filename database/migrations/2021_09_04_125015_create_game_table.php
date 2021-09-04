@@ -17,6 +17,7 @@ class CreateGameTable extends Migration
             $table->id();
             $table->timestamps();
             $table->boolean('is_over')->default(false);
+            $table->string('result')->nullable();
         });
     }
 

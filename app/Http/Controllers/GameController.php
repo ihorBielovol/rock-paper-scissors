@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 
 use App\Http\Requests\ConnectGameRequest;
+use App\Http\Requests\GameRequest;
 use App\Http\Requests\GestureRequest;
 use App\Http\Requests\NewGameRequest;
 use App\Models\Game;
